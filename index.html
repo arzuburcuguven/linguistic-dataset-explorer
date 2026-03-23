@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linguistic Dataset Explorer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #171717;
+    --surface2: #1f1f1f;
+    --surface3: #2a2a2a;
+    --border: #2e2e2e;
+    --border2: #3d3d3d;
+    --text: #e8e6e0;
+    --text2: #a09e98;
+    --text3: #6b6966;
+    --accent: #c8b560;
+    --accent-dim: #3d3620;
+    --accent-text: #f5e9a0;
+    --green: #4a7c59;
+    --green-dim: #1a2e22;
+    --green-text: #8fcca0;
+    --blue: #3a6080;
+    --blue-dim: #152230;
+    --blue-text: #8bbfde;
+    --red: #7c3a3a;
+    --red-dim: #2e1515;
+    --red-text: #e89090;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: baseline;
+    gap: 2rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    font-weight: normal;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .logo span {
+    color: var(--text3);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    margin-left: 0.5rem;
+    text-transform: none;
+    font-family: 'Courier New', monospace;
+  }
+
+  nav {
+    display: flex;
+    gap: 1.5rem;
+    margin-left: auto;
+    align-items: center;
+  }
+
+  nav a {
+    font-size: 0.8rem;
+    color: var(--text3);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  nav a:hover { color: var(--accent); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 73px);
+  }
+
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 2rem;
+    position: sticky;
+    top: 73px;
+    height: calc(100vh - 73px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .upload-zone {
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .upload-zone input { display: none; }
+
+  .upload-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+  }
+
+  .upload-zone p {
+    font-size: 0.8rem;
+    color: var(--text2);
+    line-height: 1.4;
+  }
+
+  .upload-zone strong {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+    font-family: 'Courier New', monospace;
+  }
+
+  .section-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-title button {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 0.65rem;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    padding: 0;
+  }
+
+  .section-title button:hover { color: var(--accent); }
+
+  .pill-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .pill-grid::-webkit-scrollbar { width: 3px; }
+  .pill-grid::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .pill {
+    font-size: 0.7rem;
+    padding: 3px 9px;
+    border-radius: 2px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.03em;
+    user-select: none;
+  }
+
+  .pill:hover {
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .pill.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text);
+    font-size: 0.8rem;
+    font-family: 'Courier New', monospace;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 0.5rem;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text3); }
+
+  .main {
+    padding: 2rem 3rem;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .result-count {
+    font-size: 0.8rem;
+    color: var(--text3);
+    font-family: 'Courier New', monospace;
+  }
+
+  .result-count strong {
+    color: var(--accent);
+    font-weight: normal;
+  }
+
+  .mode-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-left: auto;
+  }
+
+  .mode-toggle button {
+    background: none;
+    border: none;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.75rem;
+    color: var(--text3);
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    font-family: 'Georgia', serif;
+  }
+
+  .mode-toggle button.active {
+    background: var(--surface3);
+    color: var(--text);
+  }
+
+  .cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .dataset-card {
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 0;
+    transition: background 0.15s;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-cite {
+    font-size: 0.95rem;
+    color: var(--text);
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .card-year {
+    font-size: 0.7rem;
+    color: var(--text3);
+    font-family: 'Courier New', monospace;
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 0.6rem;
+  }
+
+  .tag {
+    font-size: 0.68rem;
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .tag-lang {
+    background: var(--blue-dim);
+    color: var(--blue-text);
+    border: 1px solid var(--blue);
+  }
+
+  .tag-lang.matched {
+    background: var(--accent-dim);
+    color: var(--accent-text);
+    border: 1px solid var(--accent);
+  }
+
+  .tag-phenom {
+    background: var(--green-dim);
+    color: var(--green-text);
+    border: 1px solid var(--green);
+  }
+
+  .tag-phenom.matched {
+    background: var(--red-dim);
+    color: var(--red-text);
+    border: 1px solid var(--red);
+  }
+
+  .tag-method {
+    background: var(--surface3);
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+
+  .tag-eval {
+    background: var(--surface2);
+    color: var(--text3);
+    border: 1px solid var(--border);
+    font-style: italic;
+  }
+
+  .card-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-bottom: 0.4rem;
+  }
+
+  .card-row-label {
+    font-size: 0.65rem;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    width: 72px;
+    flex-shrink: 0;
+    padding-top: 3px;
+  }
+
+  .no-phenom {
+    font-size: 0.7rem;
+    color: var(--text3);
+    font-style: italic;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--text3);
+  }
+
+  .empty-state .big {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+  }
+
+  .empty-state h2 {
+    font-size: 1.1rem;
+    font-weight: normal;
+    color: var(--text2);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p {
+    font-size: 0.85rem;
+    max-width: 320px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Matrix view */
+  .matrix-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  .matrix-table {
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    min-width: 100%;
+  }
+
+  .matrix-table th {
+    background: var(--surface2);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    font-weight: normal;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.03em;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .matrix-table th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 180px;
+    background: var(--surface2);
+  }
+
+  .matrix-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    color: var(--text2);
+  }
+
+  .matrix-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 1;
+    color: var(--text);
+    border-right: 1px solid var(--border);
+    font-size: 0.75rem;
+  }
+
+  .matrix-table tr:hover td { background: var(--surface2); }
+  .matrix-table tr:hover td:first-child { background: var(--surface3); }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    background: var(--green);
+    display: inline-block;
+  }
+
+  .dot.matched { background: var(--accent); }
+
+  .filter-active-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--surface2);
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+
+  .filter-active-label {
+    font-size: 0.65rem;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: center;
+    margin-right: 0.25rem;
+  }
+
+  .active-filter-tag {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    font-family: 'Courier New', monospace;
+    background: var(--accent-dim);
+    color: var(--accent-text);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .active-filter-tag:hover { opacity: 0.7; }
+
+  .clear-all-btn {
+    font-size: 0.65rem;
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    padding: 2px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-left: auto;
+    transition: all 0.15s;
+  }
+
+  .clear-all-btn:hover {
+    border-color: var(--red);
+    color: var(--red-text);
+  }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; }
+    header { padding: 1rem 1.5rem; }
+    .main { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LingExplorer <span>v1.0</span></div>
+  <nav>
+    <a href="#" id="formatHelp">CSV format</a>
+    <a href="https://github.com/" target="_blank" id="ghLink">GitHub ↗</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+
+    <div>
+      <div class="section-title">Dataset</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".csv">
+        <div class="upload-icon">⬆</div>
+        <strong>Upload your CSV</strong>
+        <p>Drag & drop or click to browse.<br>Expects the standard LingBench format.</p>
+      </div>
+      <div id="fileStatus" style="font-size:0.75rem;color:var(--text3);margin-top:0.5rem;font-family:'Courier New',monospace;text-align:center;"></div>
+    </div>
+
+    <div id="langSection" style="display:none">
+      <div class="section-title">
+        Languages
+        <div style="display:flex;gap:8px">
+          <button onclick="selectAllLangs()">All</button>
+          <button onclick="clearLangs()">None</button>
+        </div>
+      </div>
+      <input type="text" class="search-input" id="langSearch" placeholder="Search languages…" oninput="renderLangPills()">
+      <div class="pill-grid" id="langPills"></div>
+    </div>
+
+    <div id="phenomSection" style="display:none">
+      <div class="section-title">
+        Phenomena
+        <div style="display:flex;gap:8px">
+          <button onclick="selectAllPhenoms()">All</button>
+          <button onclick="clearPhenoms()">None</button>
+        </div>
+      </div>
+      <input type="text" class="search-input" id="phenomSearch" placeholder="Search phenomena…" oninput="renderPhenomPills()">
+      <div class="pill-grid" id="phenomPills"></div>
+    </div>
+
+    <div id="yearSection" style="display:none">
+      <div class="section-title">Year range</div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:0.8rem;font-family:'Courier New',monospace;color:var(--text2)">
+        <input type="number" id="yearFrom" class="search-input" style="width:80px;margin:0" placeholder="From">
+        <span style="color:var(--text3)">—</span>
+        <input type="number" id="yearTo" class="search-input" style="width:80px;margin:0" placeholder="To">
+        <button onclick="applyYearFilter()" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text2);padding:5px 10px;border-radius:2px;cursor:pointer;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase">Go</button>
+      </div>
+    </div>
+
+  </aside>
+
+  <main class="main">
+
+    <div class="toolbar" id="toolbar" style="display:none">
+      <span class="result-count" id="resultCount"></span>
+      <div class="mode-toggle">
+        <button class="active" onclick="setView('cards')" id="btnCards">Cards</button>
+        <button onclick="setView('matrix')" id="btnMatrix">Matrix</button>
+      </div>
+    </div>
+
+    <div id="activeFilters"></div>
+    <div id="content">
+      <div class="empty-state">
+        <div class="big">◈</div>
+        <h2>Upload a dataset CSV to begin</h2>
+        <p>Load your CSV file using the panel on the left. The tool will parse it and let you filter by language and phenomenon.</p>
+        <p style="margin-top:1rem"><a href="#" id="loadSample" style="color:var(--accent);text-decoration:none;font-size:0.85rem">↳ Load sample data</a></p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const PHENOM_COLS = [
+  'Agreement','Case','DOM','Derivation','Inflection','TAME','Morphology',
+  'Word formation','Determiner','Pronouns','Classifiers','Ergativity',
+  'Word order','Argument Structure','oblique','Passive','Copular construction',
+  'Negation','Nominalization','Comparison','Interrogatives','Ellipsis',
+  'Coordination','Relative Clause','Complex clauses','Adverbial Clauses',
+  'control&raising','Movement','Island Effects','Filler-Gap','Topicalization',
+  'ba','coverb','definiteness-effect','Quantifiers','NPI','Binding'
+];
+
+let allData = [];
+let allLangs = [];
+let allPhenoms = [];
+let selectedLangs = new Set();
+let selectedPhenoms = new Set();
+let yearFrom = null, yearTo = null;
+let currentView = 'cards';
+
+// Upload zone
+const zone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+zone.onclick = () => fileInput.click();
+fileInput.onchange = e => loadFile(e.target.files[0]);
+zone.ondragover = e => { e.preventDefault(); zone.classList.add('drag-over'); };
+zone.ondragleave = () => zone.classList.remove('drag-over');
+zone.ondrop = e => { e.preventDefault(); zone.classList.remove('drag-over'); loadFile(e.dataTransfer.files[0]); };
+
+document.getElementById('loadSample').onclick = e => { e.preventDefault(); loadSampleData(); };
+
+function loadFile(file) {
+  if (!file) return;
+  document.getElementById('fileStatus').textContent = 'Parsing ' + file.name + '…';
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: res => processData(res.data, file.name),
+    error: err => { document.getElementById('fileStatus').textContent = 'Error: ' + err.message; }
+  });
+}
+
+function processData(rows, filename) {
+  allData = rows.map(r => {
+    let langs = [];
+    try { langs = JSON.parse((r.Languages || '').replace(/'/g, '"')); } catch(e) { langs = []; }
+    let methods = [];
+    try { methods = JSON.parse((r.Method || '').replace(/'/g, '"')); } catch(e) { methods = []; }
+    let evals = [];
+    try { evals = JSON.parse((r.EvalType || '').replace(/'/g, '"')); } catch(e) { evals = []; }
+
+    const phenomena = PHENOM_COLS.filter(col => {
+      const v = r[col];
+      return v && v.trim().toLowerCase() === 'check';
+    });
+
+    return {
+      cite: (r.Citation || '').replace(/^"|"$/g, '').trim(),
+      year: parseInt(r.Year) || 0,
+      langs,
+      methods,
+      evals,
+      phenomena,
+      multilingual: (r.IsMultilingual || '').toLowerCase() === 'true',
+      numExamples: r.NumExamples,
+    };
+  }).filter(d => d.cite);
+
+  allLangs = [...new Set(allData.flatMap(d => d.langs))].sort();
+  allPhenoms = [...new Set(allData.flatMap(d => d.phenomena))].sort();
+  selectedLangs = new Set(allLangs);
+  selectedPhenoms = new Set(allPhenoms);
+
+  document.getElementById('fileStatus').textContent = '✓ ' + filename + ' — ' + allData.length + ' entries';
+  document.getElementById('langSection').style.display = '';
+  document.getElementById('phenomSection').style.display = '';
+  document.getElementById('yearSection').style.display = '';
+  document.getElementById('toolbar').style.display = '';
+
+  const years = allData.map(d => d.year).filter(Boolean);
+  document.getElementById('yearFrom').value = Math.min(...years);
+  document.getElementById('yearTo').value = Math.max(...years);
+  yearFrom = Math.min(...years);
+  yearTo = Math.max(...years);
+
+  renderLangPills();
+  renderPhenomPills();
+  render();
+}
+
+function renderLangPills() {
+  const q = document.getElementById('langSearch').value.toLowerCase();
+  const grid = document.getElementById('langPills');
+  grid.innerHTML = '';
+  allLangs.filter(l => l.toLowerCase().includes(q)).forEach(l => {
+    const p = document.createElement('span');
+    p.className = 'pill' + (selectedLangs.has(l) ? ' active' : '');
+    p.textContent = l;
+    p.onclick = () => { selectedLangs.has(l) ? selectedLangs.delete(l) : selectedLangs.add(l); p.classList.toggle('active'); render(); };
+    grid.appendChild(p);
+  });
+}
+
+function renderPhenomPills() {
+  const q = document.getElementById('phenomSearch').value.toLowerCase();
+  const grid = document.getElementById('phenomPills');
+  grid.innerHTML = '';
+  allPhenoms.filter(p => p.toLowerCase().includes(q)).forEach(ph => {
+    const p = document.createElement('span');
+    p.className = 'pill' + (selectedPhenoms.has(ph) ? ' active' : '');
+    p.textContent = ph;
+    p.onclick = () => { selectedPhenoms.has(ph) ? selectedPhenoms.delete(ph) : selectedPhenoms.add(ph); p.classList.toggle('active'); render(); };
+    grid.appendChild(p);
+  });
+}
+
+function selectAllLangs() { selectedLangs = new Set(allLangs); renderLangPills(); render(); }
+function clearLangs() { selectedLangs.clear(); renderLangPills(); render(); }
+function selectAllPhenoms() { selectedPhenoms = new Set(allPhenoms); renderPhenomPills(); render(); }
+function clearPhenoms() { selectedPhenoms.clear(); renderPhenomPills(); render(); }
+
+function applyYearFilter() {
+  yearFrom = parseInt(document.getElementById('yearFrom').value) || null;
+  yearTo = parseInt(document.getElementById('yearTo').value) || null;
+  render();
+}
+
+function getFiltered() {
+  const selLangsArr = [...selectedLangs];
+  const selPhenomsArr = [...selectedPhenoms];
+  const langFilterActive = selectedLangs.size < allLangs.length;
+  const phenomFilterActive = selectedPhenoms.size < allPhenoms.length;
+
+  return allData.filter(d => {
+    if (langFilterActive && !d.langs.some(l => selectedLangs.has(l))) return false;
+    if (phenomFilterActive && !d.phenomena.some(p => selectedPhenoms.has(p))) return false;
+    if (yearFrom && d.year < yearFrom) return false;
+    if (yearTo && d.year > yearTo) return false;
+    return true;
+  });
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('btnCards').classList.toggle('active', v === 'cards');
+  document.getElementById('btnMatrix').classList.toggle('active', v === 'matrix');
+  render();
+}
+
+function render() {
+  const filtered = getFiltered();
+  document.getElementById('resultCount').innerHTML = '<strong>' + filtered.length + '</strong> datasets';
+  renderActiveFilters();
+
+  if (currentView === 'cards') renderCards(filtered);
+  else renderMatrix(filtered);
+}
+
+function renderActiveFilters() {
+  const bar = document.getElementById('activeFilters');
+  const langFilterActive = selectedLangs.size < allLangs.length && selectedLangs.size > 0;
+  const phenomFilterActive = selectedPhenoms.size < allPhenoms.size && selectedPhenoms.size > 0;
+  if (!langFilterActive && !phenomFilterActive) { bar.innerHTML = ''; return; }
+
+  let html = '<div class="filter-active-bar"><span class="filter-active-label">Filters</span>';
+  if (langFilterActive) {
+    [...selectedLangs].slice(0, 5).forEach(l => {
+      html += `<span class="active-filter-tag" onclick="selectedLangs.delete('${l}');renderLangPills();render()">${l} ×</span>`;
+    });
+    if (selectedLangs.size > 5) html += `<span class="active-filter-tag">+${selectedLangs.size - 5} more</span>`;
+  }
+  if (phenomFilterActive) {
+    [...selectedPhenoms].slice(0, 5).forEach(p => {
+      html += `<span class="active-filter-tag" onclick="selectedPhenoms.delete('${p}');renderPhenomPills();render()">${p} ×</span>`;
+    });
+    if (selectedPhenoms.size > 5) html += `<span class="active-filter-tag">+${selectedPhenoms.size - 5} more</span>`;
+  }
+  html += `<button class="clear-all-btn" onclick="selectAllLangs();selectAllPhenoms()">Clear all</button></div>`;
+  bar.innerHTML = html;
+}
+
+function renderCards(data) {
+  if (!data.length) {
+    document.getElementById('content').innerHTML = '<div class="empty-state"><div class="big">∅</div><h2>No datasets match</h2><p>Try broadening your language or phenomenon selection.</p></div>';
+    return;
+  }
+
+  const langFilterActive = selectedLangs.size < allLangs.length;
+  const phenomFilterActive = selectedPhenoms.size < allPhenoms.size;
+
+  let html = '<div class="cards-grid">';
+  data.forEach(d => {
+    const langTags = d.langs.map(l => {
+      const m = langFilterActive && selectedLangs.has(l) ? ' matched' : '';
+      return `<span class="tag tag-lang${m}">${l}</span>`;
+    }).join('');
+
+    const phenomTags = d.phenomena.length
+      ? d.phenomena.map(p => {
+          const m = phenomFilterActive && selectedPhenoms.has(p) ? ' matched' : '';
+          return `<span class="tag tag-phenom${m}">${p}</span>`;
+        }).join('')
+      : '<span class="no-phenom">no phenomena recorded</span>';
+
+    const methodTags = d.methods.map(m => `<span class="tag tag-method">${m}</span>`).join('');
+    const evalTags = d.evals.map(e => `<span class="tag tag-eval">${e}</span>`).join('');
+
+    html += `<div class="dataset-card">
+      <div class="card-top">
+        <div class="card-cite">${d.cite}</div>
+        <span class="card-year">${d.year}</span>
+      </div>
+      ${d.langs.length ? `<div class="card-row"><span class="card-row-label">Languages</span><div class="card-meta">${langTags}</div></div>` : ''}
+      ${d.methods.length ? `<div class="card-row"><span class="card-row-label">Method</span><div class="card-meta">${methodTags}</div></div>` : ''}
+      ${d.evals.length ? `<div class="card-row"><span class="card-row-label">Eval type</span><div class="card-meta">${evalTags}</div></div>` : ''}
+      <div class="card-row"><span class="card-row-label">Phenomena</span><div class="card-meta">${phenomTags}</div></div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderMatrix(data) {
+  if (!data.length) {
+    document.getElementById('content').innerHTML = '<div class="empty-state"><div class="big">∅</div><h2>No datasets match</h2><p>Try broadening your selection.</p></div>';
+    return;
+  }
+
+  const phenomFilterActive = selectedPhenoms.size < allPhenoms.size;
+  const visiblePhenoms = phenomFilterActive ? [...selectedPhenoms] : PHENOM_COLS.filter(p => allPhenoms.includes(p));
+
+  let html = '<div class="matrix-wrap"><table class="matrix-table"><thead><tr><th>Dataset</th>';
+  visiblePhenoms.forEach(p => { html += `<th>${p}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  data.forEach(d => {
+    html += `<tr><td>${d.cite} <span style="color:var(--text3)">${d.year}</span></td>`;
+    visiblePhenoms.forEach(p => {
+      const has = d.phenomena.includes(p);
+      const isFiltered = phenomFilterActive && selectedPhenoms.has(p);
+      html += `<td style="text-align:center">${has ? `<span class="dot${isFiltered ? ' matched' : ''}"></span>` : ''}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+// Sample data loader
+function loadSampleData() {
+  const sample = `Citation,Year,Method,Languages,EvalType,NumExamples,IsMultilingual,Agreement,Case,DOM,Derivation,Inflection,TAME,Morphology,Word formation,Determiner,Pronouns,Classifiers,Ergativity,Word order,Argument Structure,oblique,Passive,Copular construction,Negation,Nominalization,Comparison,Interrogatives,Ellipsis,Coordination,Relative Clause,Complex clauses,Adverbial Clauses,control&raising,Movement,Island Effects,Filler-Gap,Topicalization,ba,coverb,definiteness-effect,Quantifiers,NPI,Binding
+"Adeeba et al., (2025)",2025,['Template-based perturbation over annotated data'],['Urdu'],['Minimal pairs'],5696,False,,,,,,,,,,check,check,,check,,,,,,,,,check,,,,,,,,,,,,,
+"Başar et al., (2025)",2025,['Semi-automatically'],['Turkish'],['Minimal pairs'],16000,False,,,,,,,,,check,,,,check,check,,check,,,check,,,check,,check,,,,,check,,,,,,check,,check
+"Liu et al., (2024)",2024,['Template-based generation'],['Chinese'],['Minimal pairs'],35000,False,,,,,,,,,,,check,,,check,,check,,,,,check,check,,check,,,check,,,,check,check,,,check,,check
+"Warstadt et al., 2020",2020,['Template-based generation'],['English'],['Minimal pairs'],67000,False,,,,,,,,,,,,,,check,,,,,,,,check,,,,,check,,check,check,,,,,check,,check
+"Song et al., (2022)",2022,['Template-based perturbation over annotated data'],['Chinese'],['Minimal pairs'],38000,False,,,,,,check,,,,,check,,,,,,,,,,check,,,check,,,,check,,,,,,check,,check,check
+"Taktasheva et al., (2024)",2024,['Template-based perturbation over annotated data'],['Russian'],['Minimal pairs'],45000,False,,,,,check,check,,check,,,,,,check,,,,check,,,,,,,,,,,,,,,,,,,check
+"Ármannsson et al., 2025",2025,['Expert-written'],['Icelandic'],['Prompting'],1160,False,,check,,,,check,,check,,,,,check,,,,,,,,,check,,,,,,check,check,,check,,,,,,check`;
+
+  Papa.parse(sample, {
+    header: true,
+    skipEmptyLines: true,
+    complete: res => processData(res.data, 'sample_data.csv'),
+  });
+}
+
+// Format help modal (console fallback)
+document.getElementById('formatHelp').onclick = e => {
+  e.preventDefault();
+  alert('Expected CSV columns:\n\nCitation, Year, Method, Languages, EvalType, NumExamples, IsMultilingual\n\nFollowed by phenomenon columns where "check" marks presence:\nAgreement, Case, DOM, Derivation, Inflection, TAME, Morphology, Word formation, Determiner, Pronouns, Classifiers, Ergativity, Word order, Argument Structure, oblique, Passive, Copular construction, Negation, Nominalization, Comparison, Interrogatives, Ellipsis, Coordination, Relative Clause, Complex clauses, Adverbial Clauses, control&raising, Movement, Island Effects, Filler-Gap, Topicalization, ba, coverb, definiteness-effect, Quantifiers, NPI, Binding');
+};
+</script>
+</body>
+</html>
